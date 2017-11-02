@@ -4,7 +4,7 @@
 
 ## Palermo
 
-[![Piazza Pretoria](https://raw.githubusercontent.com/marcofromsicily/movetopalermo/master/img/piazza-pretoria.jpg)
+![Piazza Pretoria](https://raw.githubusercontent.com/marcofromsicily/movetopalermo/master/img/piazza-pretoria.jpg)
 
 
 
