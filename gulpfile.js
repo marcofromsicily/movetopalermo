@@ -1,37 +1,96 @@
-var gulp = require('gulp');
-var browserSync = require('browser-sync').create();
-var pkg = require('./package.json');
+// Load plugins
+const autoprefixer = require("gulp-autoprefixer");
+const browsersync = require("browser-sync").create();
+const cleanCSS = require("gulp-clean-css");
+const gulp = require("gulp");
+const header = require("gulp-header");
+const plumber = require("gulp-plumber");
+const rename = require("gulp-rename");
+const sass = require("gulp-sass");
+const pkg = require('./package.json');
 
-// Copy vendor files from /node_modules into /vendor
-// NOTE: requires `npm install` before running!
-gulp.task('copy', function() {
+// Set the banner content
+const banner = ['/*!\n',
+  ' * Start Bootstrap - <%= pkg.title %> v<%= pkg.version %> (<%= pkg.homepage %>)\n',
+  ' * Copyright 2013-' + (new Date()).getFullYear(), ' <%= pkg.author %>\n',
+  ' * Licensed under <%= pkg.license %> (https://github.com/BlackrockDigital/<%= pkg.name %>/blob/master/LICENSE)\n',
+  ' */\n',
+  '\n'
+].join('');
+
+// Copy third party libraries from /node_modules into /vendor
+gulp.task('vendor', function(cb) {
+
+  // Bootstrap
   gulp.src([
-      'node_modules/bootstrap/dist/**/*',
-      '!**/npm.js',
-      '!**/bootstrap-theme.*',
-      '!**/*.map'
+      './node_modules/bootstrap/dist/**/*',
+      '!./node_modules/bootstrap/dist/css/bootstrap-grid*',
+      '!./node_modules/bootstrap/dist/css/bootstrap-reboot*'
     ])
-    .pipe(gulp.dest('vendor/bootstrap'))
+    .pipe(gulp.dest('./vendor/bootstrap'))
 
-  gulp.src(['node_modules/jquery/dist/jquery.js', 'node_modules/jquery/dist/jquery.min.js'])
-    .pipe(gulp.dest('vendor/jquery'))
-})
+  // jQuery
+  gulp.src([
+      './node_modules/jquery/dist/*',
+      '!./node_modules/jquery/dist/core.js'
+    ])
+    .pipe(gulp.dest('./vendor/jquery'))
 
-// Default task
-gulp.task('default', ['copy']);
+  cb();
 
-// Configure the browserSync task
-gulp.task('browserSync', function() {
-  browserSync.init({
-    server: {
-      baseDir: ''
-    },
-  })
-})
-
-// Dev task with browserSync
-gulp.task('dev', ['browserSync'], function() {
-  // Reloads the browser whenever HTML or CSS files change
-  gulp.watch('css/*.css', browserSync.reload);
-  gulp.watch('*.html', browserSync.reload);
 });
+
+// CSS task
+function css() {
+  return gulp
+    .src("./scss/*.scss")
+    .pipe(plumber())
+    .pipe(sass({
+      outputStyle: "expanded"
+    }))
+    .on("error", sass.logError)
+    .pipe(autoprefixer({
+      browsers: ['last 2 versions'],
+      cascade: false
+    }))
+    .pipe(header(banner, {
+      pkg: pkg
+    }))
+    .pipe(gulp.dest("./css"))
+    .pipe(rename({
+      suffix: ".min"
+    }))
+    .pipe(cleanCSS())
+    .pipe(gulp.dest("./css"))
+    .pipe(browsersync.stream());
+}
+
+// Tasks
+gulp.task("css", css);
+
+// BrowserSync
+function browserSync(done) {
+  browsersync.init({
+    server: {
+      baseDir: "./"
+    }
+  });
+  done();
+}
+
+// BrowserSync Reload
+function browserSyncReload(done) {
+  browsersync.reload();
+  done();
+}
+
+// Watch files
+function watchFiles() {
+  gulp.watch("./scss/**/*", css);
+  gulp.watch("./**/*.html", browserSyncReload);
+}
+
+gulp.task("default", gulp.parallel('vendor', css));
+
+// dev task
+gulp.task("dev", gulp.parallel(watchFiles, browserSync));
